@@ -1,4 +1,4 @@
-# Lab: Amazon EMR, Hadoop and Hadoop Streaming
+# Lab Exercise: Amazon EMR, Hadoop and Hadoop Streaming
 
 ## Cluster setup
 
@@ -24,9 +24,9 @@
 	
 <img src='images/emr-03-cluster-starting.png'>
 
-### Setup the cluster security group
+### Modify the cluster security group
 	
-**You only need to do this one time, the first time you create a cluster:** 
+**You only need to do this one time, the first time you create an EMR cluster. You will then use the same cluster security group going forward.** 
 
 Once the cluster is in "Waiting" mode, click on the **Security Groups for Master** which will take you to the Security Group configuration page, and add port 22 like you did in the _setting up_ Tutorial (Follow next three screenshots)
 
@@ -34,10 +34,12 @@ Once the cluster is in "Waiting" mode, click on the **Security Groups for Master
 <img src='images/emr-05-edit-master-security-group.png'><br>
 <img src='images/emr-06-add-ssh.png'><br>
 
-### SSH Into the Cluster
+### SSH Into the Cluster with Agent Forwarding (-A option)
+
+Remember to use `ssh-add` to add your private key to memory. You will need this to access your GitHub repository. Refer to the [Setup Lab](https://github.com/bigdatateaching/lab-setting-up#ssh-agent-setup) if you need a refresher.
 
 ```
-ssh hadoop@[[master-node-dns-name]]
+ssh -A hadoop@[[master-node-dns-name]]
 ```
 Note the usernanme is **`hadoop`**. Get your cluster's master node IP address from the Cluster console.
 
@@ -72,20 +74,38 @@ EEEEEEEEEEEEEEEEEEEE MMMMMMM             MMMMMMM RRRRRRR      RRRRRR
 [hadoop@ip-172-31-25-210 ~]$
 ```
 
-### Install git and clone repository
+### Install git and clone repository to the master node
+
+**Run the following commands, making sure to replace the values for `[[your-name]], [[your-email]] and [[your-assignment-repository]]` for the appropriate values.**
 
 3. Install git on the master node: `sudo yum install -y git`
 
-3. Clone this repository to the master node
+1. Configure your git settings:
 
-`git clone https://github.com/bigdatateaching/lab-mapreduce-hadoop-hdfs-hadoopstreaming.git`
+```
+git config --global user.name [[your name]]
+git config --global user.email [[your email]]
+```
 
-4. Change directory into the lab: `cd bigdatateaching/lab-mapreduce-hadoop-hdfs-hadoopstreaming` 
+3. Clone your lab repository
+
+`git clone [[your-;ab-repository]]`
+
+4. Change directory into the lab: `cd [[repository-directory]]` 
 
 
 ## Lab Exercises
 
-### Create your own S3 Bucket
+### 1. Provide the Master Node and Cluster Metadata
+
+Once you are ssh'd into the master node, query the instance metadata and write to a file:
+
+```
+curl http://169.254.169.254/latest/dynamic/instance-identity/document/ > instance-metadata.json
+```
+
+
+### 2. Create your own S3 Bucket
 
 You will create an S3 bucket of your own. EMR clusters can read/write data from the cluster's HDFS as well as S3 buckets. Remember, your HDFS storage gets deleted when you shut down a cluster. If you want to keep data files, you can save them to S3.
 
@@ -100,8 +120,10 @@ You will create an S3 bucket of your own. EMR clusters can read/write data from 
 3. Enter a **globally unique bucket name.** Use a combination of letters, dashes and numbers. This name must me unique across all S3 buckets on Amazon. After the first screen, you can keep the defaults. Click Next 3 times and then "Create Bucket".
 	<img src='images/s3-03-name-bucket.png'><br>
 
+**Create a text file called `my-s3-bucket.txt` and place in it the name of your bucket in the format `s3://mys3bucketname`.**
 
-### Run some HDFS commands
+
+### 3. Run some HDFS commands
 
 The reference guide for all the HDFS Shell commands is here: [https://hadoop.apache.org/docs/r2.7.3/hadoop-project-dist/hadoop-common/FileSystemShell.html](https://hadoop.apache.org/docs/r2.7.3/hadoop-project-dist/hadoop-common/FileSystemShell.html)
 
@@ -148,7 +170,9 @@ The reference guide for all the HDFS Shell commands is here: [https://hadoop.apa
 	-rw-r--r--   1 hadoop hadoop    5856576 2018-02-09 00:57 100-0.txt
 	```
 
-### Run a Java Hadoop job
+**Create a text file called `my-hdfs-commands.txt` and paste the commands you used in steps 3 and 4.**
+
+### 4. Run a Java Hadoop job
 
 You will run a Hadoop job using a built-in example that comes with Hadoop. It is the Word Count. You will issue a command that will start the job with a specified `.jar` (Java Archive) file and pass in some parameters. You will use the `100-0.txt` file in HDFS as the input, and you will specify the output to your S3 bucket.
 
@@ -283,7 +307,9 @@ To see the contents **inside** a file (the first 5 lines), you can use another c
 cat: Unable to write to output stream.
 ```
 
-### Run a simulated Hadoop Streaming using Linux pipes
+**Create a text file called `my-first-hadoop-job-results.txt` and paste the first few lines of the contents of the `part-r-00000` files.**
+
+### 5. Run a simulated Hadoop Streaming using Linux pipes
 
 
 5. In this example, you will run a **simulated MapReduce job** on a text file. We say simulated because you will not be using Hadoop to do this but rather a combination of command line functions and pipes that resemble what happens when you run a Hadoop Streaming job on a cluster on a large file. Page 50 of the book shows an example of how to test your mapper and reducer. 
@@ -308,7 +334,7 @@ cat: Unable to write to output stream.
 	- Many keys are sent together to a single reduce process. There is a guarantee that all the records with the same key are sent to the same reducer. **A single reducer program will process multiple keys.**
 
 
-### Run actual Hadoop Streaming Job using Python mapper and reducer
+### 6. Run actual Hadoop Streaming Job using Python mapper and reducer
 
 Run an actual Hadoop Streaming job, using this mapper and reducer but on a relatively larger dataset. We have compiled the entire [Project Gutenberg](https://www.gutenberg.org/) collection, a set of over 50,000 ebooks in plain text files, into a single file on S3 - `s3://bigdatateaching/gutenberg-single-file.txt`. This is single, large, text file with approximately 700 million (yes, million) lines of text, and about ~30GB in size. 
 
@@ -318,7 +344,7 @@ Run the following command (you can cut/paste this into the command line):
 ```
 hadoop jar /usr/lib/hadoop/hadoop-streaming.jar \
 -files basic-mapper.py,basic-reducer.py \
--input s3://bigdatateaching/gutenberg-single-file-25m.txt \
+-input s3://bigdatateaching/gutenberg/gutenberg-single-file-25m.txt \
 -output gutenberg-word-count \
 -mapper basic-mapper.py \
 -reducer basic-reducer.py
@@ -361,7 +387,7 @@ cat: Unable to write to output stream.
 [hadoop@ip-172-31-56-229 lab-hadoop-streaming]$
 ```	
 
-### Adjust cluster size on demand	
+### 7. Adjust cluster size on demand	
 Explore scalability and paralleism by increasing the size of the cluster by adding four more *Task* nodes and re-running the streaming job.
 
 	* Go to the EMR Console and click on your current cluster
@@ -372,4 +398,16 @@ Explore scalability and paralleism by increasing the size of the cluster by addi
 	* Wait until the TASK group changes status from *Provisioning* to *Running*
 	* Run the job again, but now instead of having the output go into HDFS, make the output go into your S3 bucket. You will see that the job runs much faster and there will probably be more reducer processes and therefore more output files.
 
+**Create a text file called `scaling.txt` where you explain what happened when you re-sized the cluster.**
 
+## Submitting the Lab
+
+Make sure you commit **only the files requested**, and push your repository to GitHub!
+
+The files to be committed to the repository for this lab are:
+
+* `instance-metadata.json` from Exercise 1
+* `my-s3-bucket.txt` from Exercise 2
+* `my-hdfs-commands.txt` from Exercise 3
+* `my-first-hadoop-job-results.txt` from Exercise 4
+* `scaling.txt` from Exercise 7
